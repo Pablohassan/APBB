@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { ApiError } from '../middleware/error-handler';
 
+
 const sitePayloadSchema = z.object({
   label: z.string(),
   addressLine1: z.string(),
@@ -18,6 +19,7 @@ const sitePayloadSchema = z.object({
   contactPhone: z.string().optional(),
 });
 
+
 const clientPayloadSchema = z.object({
   name: z.string().min(2),
   contactName: z.string().optional(),
@@ -25,7 +27,7 @@ const clientPayloadSchema = z.object({
   contactPhone: z.string().optional(),
   billingAddress: z.string().optional(),
   notes: z.string().optional(),
-  sites: z.array(sitePayloadSchema).default([]),
+
 });
 
 export const clientsRouter = Router();

@@ -14,7 +14,9 @@ création des affaires, dispatch urgent/standard, suivi des interventions, astre
 ## Backend
 
 - **Langage** : TypeScript (Express, Prisma ORM, Zod)
+
 - **Base de données** : PostgreSQL (configurable via `DATABASE_URL`)
+
 - **Fonctionnalités couvertes** :
   - Gestion des clients et des sites
   - Affaires (dossiers) avec interventions multiples
@@ -32,7 +34,10 @@ npm run prisma:generate
 npm run dev
 ```
 
+
 > ⚠️ Assurez-vous de disposer d'une instance PostgreSQL accessible (par défaut `postgresql://postgres:postgres@localhost:5432/apbb`).
+
+=======
 
 > ℹ️ L’installation des dépendances peut nécessiter un accès internet au registre npm.
 
