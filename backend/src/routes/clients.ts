@@ -3,6 +3,23 @@ import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { ApiError } from '../middleware/error-handler';
 
+
+const sitePayloadSchema = z.object({
+  label: z.string(),
+  addressLine1: z.string(),
+  addressLine2: z.string().optional(),
+  postalCode: z.string(),
+  city: z.string(),
+  country: z.string().default('France'),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  accessNotes: z.string().optional(),
+  contactName: z.string().optional(),
+  contactEmail: z.string().email().optional(),
+  contactPhone: z.string().optional(),
+});
+
+
 const clientPayloadSchema = z.object({
   name: z.string().min(2),
   contactName: z.string().optional(),
@@ -10,39 +27,7 @@ const clientPayloadSchema = z.object({
   contactPhone: z.string().optional(),
   billingAddress: z.string().optional(),
   notes: z.string().optional(),
-  sites: z
-    .array(
-      z.object({
-        label: z.string(),
-        addressLine1: z.string(),
-        addressLine2: z.string().optional(),
-        postalCode: z.string(),
-        city: z.string(),
-        country: z.string().default('France'),
-        latitude: z.number().optional(),
-        longitude: z.number().optional(),
-        accessNotes: z.string().optional(),
-        contactName: z.string().optional(),
-        contactEmail: z.string().email().optional(),
-        contactPhone: z.string().optional(),
-      }),
-    )
-    .default([]),
-});
 
-const sitePayloadSchema = clientPayloadSchema.shape.sites.element.pick({
-  label: true,
-  addressLine1: true,
-  addressLine2: true,
-  postalCode: true,
-  city: true,
-  country: true,
-  latitude: true,
-  longitude: true,
-  accessNotes: true,
-  contactName: true,
-  contactEmail: true,
-  contactPhone: true,
 });
 
 export const clientsRouter = Router();
