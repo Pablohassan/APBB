@@ -1,0 +1,319 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  TECHNICIAN
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CLIENT
+  WAITING_PARTS
+  REPORT_PENDING
+  COMPLETED
+  CLOSED
+}
+
+enum CasePriority {
+  STANDARD
+  URGENT
+}
+
+enum InterventionStatus {
+  PENDING_ASSIGNMENT
+  ASSIGNED
+  EN_ROUTE
+  ON_SITE
+  REPORT_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum InterventionType {
+  URGENT
+  STANDARD
+  ASTREINTE
+  INSTALLATION
+  MAINTENANCE
+  QUOTE_ONLY
+}
+
+enum QuoteStatus {
+  REQUESTED
+  IN_PROGRESS
+  SENT
+  ACCEPTED
+  DECLINED
+}
+
+enum DeviceStatus {
+  PENDING_VALIDATION
+  ACTIVE
+  RETIRED
+  REPLACED
+  REJECTED
+}
+
+enum MediaType {
+  PHOTO
+  DOCUMENT
+}
+
+enum ReviewQueue {
+  REPORT
+  DEVICE_VALIDATION
+  ASTREINTE
+  QUOTE
+}
+
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  phone       String?
+  firstName   String
+  lastName    String
+  role        UserRole
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  technician  Technician?
+  createdCases Case[]   @relation("CaseCreatedBy")
+  closedCases  Case[]   @relation("CaseClosedBy")
+  interventions Intervention[] @relation("InterventionTechnician")
+  logs        InterventionLog[]
+  requestedQuotes Quote[] @relation("QuoteRequestedBy")
+  handledQuotes   Quote[] @relation("QuoteHandledBy")
+}
+
+model Technician {
+  id           String   @id
+  user         User     @relation(fields: [id], references: [id])
+  colorHex     String?
+  calendarEmail String?
+  primaryZone  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Client {
+  id           String   @id @default(cuid())
+  name         String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  billingAddress String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sites        Site[]
+  cases        Case[]
+}
+
+model Site {
+  id             String  @id @default(cuid())
+  client         Client  @relation(fields: [clientId], references: [id])
+  clientId       String
+  label          String
+  addressLine1   String
+  addressLine2   String?
+  postalCode     String
+  city           String
+  country        String  @default("France")
+  latitude       Float?
+  longitude      Float?
+  accessNotes    String?
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  devices        Device[]
+  cases          Case[]
+}
+
+model Case {
+  id             String   @id @default(cuid())
+  title          String
+  description    String?
+  priority       CasePriority @default(STANDARD)
+  status         CaseStatus   @default(OPEN)
+  driveFolderUrl String?
+  calendarEventId String?
+  client         Client    @relation(fields: [clientId], references: [id])
+  clientId       String
+  site           Site      @relation(fields: [siteId], references: [id])
+  siteId         String
+  createdBy      User      @relation("CaseCreatedBy", fields: [createdById], references: [id])
+  createdById    String
+  closedBy       User?     @relation("CaseClosedBy", fields: [closedById], references: [id])
+  closedById     String?
+  closedAt       DateTime?
+  plannedAt      DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  interventions  Intervention[]
+  quotes         Quote[]
+}
+
+model Intervention {
+  id              String   @id @default(cuid())
+  case            Case     @relation(fields: [caseId], references: [id])
+  caseId          String
+  title           String
+  type            InterventionType
+  status          InterventionStatus @default(PENDING_ASSIGNMENT)
+  priority        CasePriority       @default(STANDARD)
+  scheduledStart  DateTime?
+  scheduledEnd    DateTime?
+  actualStart     DateTime?
+  actualEnd       DateTime?
+  addressOverride String?
+  notes           String?
+  driveFolderUrl  String?
+  calendarEvent   CalendarEvent?
+  technician      User?    @relation("InterventionTechnician", fields: [technicianId], references: [id])
+  technicianId    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  logs            InterventionLog[]
+  media           InterventionMedia[]
+  quoteRequests   QuoteRequest[]
+  deviceProposals DeviceProposal[]
+}
+
+model InterventionLog {
+  id             String   @id @default(cuid())
+  intervention   Intervention @relation(fields: [interventionId], references: [id])
+  interventionId String
+  statusFrom     InterventionStatus?
+  statusTo       InterventionStatus
+  note           String?
+  createdAt      DateTime @default(now())
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  createdById    String
+}
+
+model InterventionMedia {
+  id             String   @id @default(cuid())
+  intervention   Intervention @relation(fields: [interventionId], references: [id])
+  interventionId String
+  url            String
+  mediaType      MediaType
+  description    String?
+  createdAt      DateTime @default(now())
+}
+
+model Quote {
+  id             String   @id @default(cuid())
+  case           Case     @relation(fields: [caseId], references: [id])
+  caseId         String
+  status         QuoteStatus @default(REQUESTED)
+  label          String?
+  amount         Decimal? @db.Decimal(10,2)
+  currency       String? @default("EUR")
+  documentUrl    String?
+  requestedAt    DateTime  @default(now())
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  declinedAt     DateTime?
+  requestedBy    User      @relation("QuoteRequestedBy", fields: [requestedById], references: [id])
+  requestedById  String
+  handledBy      User?     @relation("QuoteHandledBy", fields: [handledById], references: [id])
+  handledById    String?
+  notes          String?
+  quoteRequests  QuoteRequest[]
+}
+
+model QuoteRequest {
+  id               String   @id @default(cuid())
+  intervention     Intervention @relation(fields: [interventionId], references: [id])
+  interventionId   String
+  quote            Quote?   @relation(fields: [quoteId], references: [id])
+  quoteId          String?
+  description      String
+  templateKey      String?
+  status           QuoteStatus @default(REQUESTED)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Device {
+  id               String   @id @default(cuid())
+  site             Site     @relation(fields: [siteId], references: [id])
+  siteId           String
+  label            String
+  brand            String?
+  model            String?
+  serialNumber     String?
+  status           DeviceStatus @default(PENDING_VALIDATION)
+  gpsLatitude      Float?
+  gpsLongitude     Float?
+  accessLocation   String?
+  notes            String?
+  installedAt      DateTime?
+  retiredAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  proposals        DeviceProposal[] @relation("DeviceProposalReplacement")
+}
+
+model DeviceProposal {
+  id                String   @id @default(cuid())
+  site              Site     @relation(fields: [siteId], references: [id])
+  siteId            String
+  intervention      Intervention @relation(fields: [interventionId], references: [id])
+  interventionId    String
+  label             String
+  brand             String?
+  model             String?
+  serialNumber      String?
+  gpsLatitude       Float?
+  gpsLongitude      Float?
+  accessLocation    String?
+  notes             String?
+  photosFolderUrl   String?
+  status            DeviceStatus @default(PENDING_VALIDATION)
+  previousDevice    Device?  @relation("DeviceProposalReplacement", fields: [previousDeviceId], references: [id])
+  previousDeviceId  String?
+  validatedAt       DateTime?
+  validatedById     String?
+  rejectedAt        DateTime?
+  rejectionNote     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model CalendarEvent {
+  id               String   @id @default(cuid())
+  intervention     Intervention @relation(fields: [interventionId], references: [id])
+  interventionId   String   @unique
+  externalId       String?
+  summary          String
+  location         String?
+  start            DateTime?
+  end              DateTime?
+  status           String?
+  driveLink        String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ReviewItem {
+  id             String   @id @default(cuid())
+  queue          ReviewQueue
+  label          String
+  referenceId    String
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+  resolvedById   String?
+  notes          String?
+}
